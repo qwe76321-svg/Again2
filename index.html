@@ -46,12 +46,6 @@
         
         .checkbox-wrapper input:checked + div { background-color: #c5a059; border-color: #c5a059; }
         .checkbox-wrapper input:checked + div svg { display: block; }
-        
-        /* Toast Animation */
-        .toast-enter { transform: translateY(100%); opacity: 0; }
-        .toast-enter-active { transform: translateY(0); opacity: 1; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .toast-leave { transform: translateY(0); opacity: 1; }
-        .toast-leave-active { transform: translateY(100%); opacity: 0; transition: all 0.3s ease; }
     </style>
 </head>
 <body class="text-primary font-sans antialiased pb-28" x-data="tripApp()" x-init="initApp()">
@@ -154,41 +148,41 @@
             
             <div class="mb-8 mt-2">
                 <h2 class="text-3xl font-serif text-primary">預約管理</h2>
-                <p class="text-sm text-gray-500 mt-1">必做預約 (進度會自動儲存)</p>
+                <p class="text-sm text-gray-500 mt-1">必做預約 (依照日期順序排列)</p>
             </div>
 
             <div class="space-y-4">
-                <template x-for="(day, dIdx) in days">
-                    <template x-for="(event, eIdx) in day.events">
-                        <template x-if="event.isReservation">
-                            <label class="checkbox-wrapper bg-white p-5 rounded-lg shadow-soft flex items-start gap-4 cursor-pointer select-none transition-all duration-300"
-                                   :class="event.booked ? 'opacity-60 grayscale' : 'border-l-4 border-alert'">
-                                
-                                <div class="pt-1">
-                                    <input type="checkbox" class="hidden" x-model="event.booked" @change="saveData()">
-                                    <div class="w-6 h-6 border-2 border-gray-300 rounded-md flex items-center justify-center transition-colors">
-                                        <svg class="w-4 h-4 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                    </div>
-                                </div>
+                <template x-for="item in sortedReservations" :key="item.id">
+                    <label class="checkbox-wrapper bg-white p-5 rounded-lg shadow-soft flex items-start gap-4 cursor-pointer select-none transition-all duration-300"
+                           :class="item.ref.booked ? 'opacity-60 grayscale' : 'border-l-4 border-alert'">
+                        
+                        <div class="pt-1">
+                            <input type="checkbox" class="hidden" x-model="item.ref.booked" @change="saveData()">
+                            <div class="w-6 h-6 border-2 border-gray-300 rounded-md flex items-center justify-center transition-colors">
+                                <svg class="w-4 h-4 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            </div>
+                        </div>
 
-                                <div class="flex-1">
-                                    <div class="flex justify-between items-start">
-                                        <div class="text-xs font-bold text-gray-400 uppercase tracking-wider" x-text="'Day ' + (dIdx + 1) + ' · ' + day.shortDate"></div>
-                                    </div>
-                                    <h3 class="font-bold text-lg mt-1 transition-all" 
-                                        :class="event.booked ? 'text-gray-400 line-through' : 'text-primary'"
-                                        x-text="event.title"></h3>
-                                    
-                                    <div class="flex items-center gap-2 font-mono text-sm font-bold mt-1 mb-2"
-                                         :class="event.booked ? 'text-gray-400' : 'text-gold'">
-                                        <i class="far fa-clock"></i> <span x-text="event.time"></span>
-                                    </div>
-                                    <p class="text-sm text-gray-500 font-light" x-html="event.note"></p>
-                                </div>
-                            </label>
-                        </template>
-                    </template>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-start">
+                                <div class="text-xs font-bold text-gray-400 uppercase tracking-wider" x-text="item.dayStr"></div>
+                            </div>
+                            <h3 class="font-bold text-lg mt-1 transition-all" 
+                                :class="item.ref.booked ? 'text-gray-400 line-through' : 'text-primary'"
+                                x-text="item.ref.title"></h3>
+                            
+                            <div class="flex items-center gap-2 font-mono text-sm font-bold mt-1 mb-2"
+                                 :class="item.ref.booked ? 'text-gray-400' : 'text-gold'">
+                                <i class="far fa-clock"></i> <span x-text="item.ref.time"></span>
+                            </div>
+                            <p class="text-sm text-gray-500 font-light" x-html="item.ref.note"></p>
+                        </div>
+                    </label>
                 </template>
+            </div>
+            
+            <div class="mt-8 text-center text-xs text-gray-400 font-serif italic">
+                完成所有預約，享受完美旅程。
             </div>
         </div>
 
@@ -252,6 +246,24 @@
                 activeDay: 0,
                 showSavedToast: false,
                 
+                // Computed property to flatten and sort reservations
+                get sortedReservations() {
+                    let list = [];
+                    this.days.forEach((day, dIdx) => {
+                        day.events.forEach((event, eIdx) => {
+                            if(event.isReservation) {
+                                list.push({
+                                    id: `${dIdx}-${eIdx}`,
+                                    dayStr: `Day ${dIdx + 1} · ${day.shortDate}`,
+                                    ref: event // Reference to original object for v-model
+                                });
+                            }
+                        });
+                    });
+                    // List is inherently sorted because days array is sorted
+                    return list;
+                },
+
                 initApp() {
                     const savedData = localStorage.getItem('fukuoka_trip_data_v2');
                     if (savedData) {
@@ -270,7 +282,6 @@
                         packing: []
                     };
                     
-                    // Extract Booking State
                     this.days.forEach((day, dIdx) => {
                         day.events.forEach((event, eIdx) => {
                             if(event.isReservation) {
@@ -279,7 +290,6 @@
                         });
                     });
 
-                    // Extract Packing State
                     this.packingList.forEach((cat, cIdx) => {
                         cat.items.forEach((item, iIdx) => {
                             dataToSave.packing.push({ c: cIdx, i: iIdx, checked: item.checked });
@@ -287,14 +297,11 @@
                     });
 
                     localStorage.setItem('fukuoka_trip_data_v2', JSON.stringify(dataToSave));
-                    
-                    // Show saved toast
                     this.showSavedToast = true;
                     setTimeout(() => { this.showSavedToast = false; }, 2000);
                 },
 
                 restoreState(saved) {
-                    // Restore Bookings
                     if (saved.bookings) {
                         saved.bookings.forEach(rec => {
                             if (this.days[rec.d] && this.days[rec.d].events[rec.e]) {
@@ -302,7 +309,6 @@
                             }
                         });
                     }
-                    // Restore Packing
                     if (saved.packing) {
                         saved.packing.forEach(rec => {
                             if (this.packingList[rec.c] && this.packingList[rec.c].items[rec.i]) {
@@ -387,8 +393,8 @@
                             { time: '10:00', title: '福岡玩具美術館', type: '體驗', imgKey: 'woodentoy', note: 'LaLaport 1F，開門即入場。', mapQuery: 'Fukuoka Toy Museum' },
                             { time: '12:45', title: '博多華味鳥 (博多站前)', type: '午餐', imgKey: 'hotpot,chicken', note: '午間限定水炊御膳。', mapQuery: 'Hakata Hanamidori Hakata Station', isReservation: true, booked: false },
                             { time: '14:45', title: '天神大名潮流區', type: '購物', imgKey: 'streetwear', note: 'Supreme, Neighborhood, Stussy。', mapQuery: 'Supreme Fukuoka' },
-                            { time: '16:00', title: '大名花園城聖誕市集', type: '聖誕', imgKey: 'christmas,market', note: 'Christmas Gate 市集，喝杯熱紅酒休息。', isChristmas: true },
-                            { time: '16:45', title: 'THE FULL FULL TENJIN', type: '美食', imgKey: 'bakery,bread', note: '明太子法國麵包名店，適合下午茶。', mapQuery: 'Full Full Pan to Wine Tenjin', isReservation: true, booked: false },
+                            { time: '16:00', title: 'THE FULL FULL TENJIN', type: '美食', imgKey: 'bakery,bread', note: '明太子法國麵包名店，適合下午茶。', mapQuery: 'Full Full Pan to Wine Tenjin', isReservation: true, booked: false },
+                            { time: '16:45', title: '大名花園城聖誕市集', type: '聖誕', imgKey: 'christmas,market', note: 'Christmas Gate 市集，喝杯熱紅酒休息。', isChristmas: true },
                             { time: '19:30', title: 'Sky Rental Store 取車', type: '租車', imgKey: 'car,keys', note: '設定往高千穗的導航。', isReservation: true, booked: false }
                         ]
                     },
