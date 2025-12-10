@@ -192,15 +192,28 @@
                                             </div>
                                         </template>
                                         
-                                        <template x-if="event.attachedImage">
-                                            <div class="mt-3 relative">
-                                                <p class="text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">附加圖片</p>
-                                                <img :src="event.attachedImage" class="w-full rounded-lg border border-gray-200 shadow-sm">
-                                                <template x-if="isEditing">
-                                                    <input type="text" x-model="event.attachedImage" class="mt-2 w-full text-xs p-1 border border-gray-200 rounded" placeholder="圖片檔名 (如: ticket.jpg)">
+                                        <div class="mt-3 relative p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                            <p class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider flex justify-between">
+                                                <span>附加圖片</span>
+                                                <template x-if="isEditing && event.attachedImage">
+                                                    <button @click="event.attachedImage = null" class="text-alert text-[10px] hover:underline">刪除圖片</button>
                                                 </template>
-                                            </div>
-                                        </template>
+                                            </p>
+                                            
+                                            <template x-if="event.attachedImage">
+                                                <img :src="event.attachedImage" class="w-full rounded border border-gray-200 shadow-sm mb-2">
+                                            </template>
+
+                                            <template x-if="isEditing">
+                                                <div class="mt-2">
+                                                    <label class="flex items-center justify-center w-full px-4 py-2 bg-white text-primary rounded-lg border border-dashed border-gray-300 cursor-pointer hover:border-gold hover:text-gold transition">
+                                                        <i class="fas fa-camera mr-2"></i> 選擇照片
+                                                        <input type="file" accept="image/*" class="hidden" @change="uploadImage($event, idx)">
+                                                    </label>
+                                                    <p class="text-[10px] text-gray-400 mt-1 text-center">圖片會自動壓縮以節省空間</p>
+                                                </div>
+                                            </template>
+                                        </div>
                                         
                                         <template x-if="!isEditing && event.mapQuery">
                                             <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(event.mapQuery)" target="_blank" class="block mt-4 text-center py-2 text-xs font-bold text-primary border border-gray-200 rounded hover:bg-gray-50">
@@ -311,7 +324,7 @@
     </nav>
 
     <script>
-        // Initial Data (Fallback)
+        // Default Data
         const initialDays = [
             {
                 shortDate: '12/12', weekday: '週五',
@@ -319,7 +332,7 @@
                 desc: 'Arrival & Christmas Lights',
                 specialAlert: '建議直接搭計程車前往住宿 (¥2,000)。晚上可散步去看藍色燈海。',
                 events: [
-                    { time: '19:35', title: '抵達福岡機場', type: '航班', imgKey: 'airport,night', note: '<strong>中華航空 CI116</strong><br>TPE 16:25 ➔ FUK 19:35<br>飛行時間 2h10m<br>入境手續與領行李。', attachedImage: 'flight_ticket.jpg' },
+                    { time: '19:35', title: '抵達福岡機場', type: '航班', imgKey: 'airport,night', note: '<strong>中華航空 CI116</strong><br>TPE 16:25 ➔ FUK 19:35<br>入境手續與領行李。' },
                     { time: '21:00', title: '搭計程車前往住宿', type: '交通', imgKey: 'taxi,japan', note: '前往 Sumiyoshi apartment。' },
                     { time: '21:30', title: 'Sumiyoshi apartment', type: '住宿', imgKey: 'apartment,interior', note: '辦理入住。' },
                     { time: '22:00', title: '博多車站光之街', type: '聖誕', imgKey: 'christmas,lights', note: '藍色燈海散步 (Hikari no Machi)，感受聖誕氣氛。', isChristmas: true }
@@ -419,7 +432,7 @@
                     { time: '14:00', title: '博多站伴手禮衝刺', type: '購物', imgKey: 'souvenir,japan', note: 'Ming 或 阪急地下街。必買：努努雞、Menbei。' },
                     { time: '16:00', title: '燕子林廣場 (RF)', type: '景點', imgKey: 'rooftop,city', note: '俯瞰福岡市景。' },
                     { time: '17:00', title: '前往福岡機場', type: '交通', imgKey: 'airport,taxi', note: '搭計程車前往最省力。' },
-                    { time: '20:35', title: '班機起飛', type: '航班', imgKey: 'airplane', note: '<strong>中華航空 CI117</strong><br>FUK 20:35 ➔ TPE 22:20<br>飛行時間 2h45m<br>平安返台。', attachedImage: 'flight_ticket.jpg' }
+                    { time: '20:35', title: '班機起飛', type: '航班', imgKey: 'airplane', note: '<strong>中華航空 CI117</strong><br>FUK 20:35 ➔ TPE 22:20<br>平安返台。' }
                 ]
             }
         ];
@@ -430,7 +443,7 @@
                 activeDay: 0,
                 showSavedToast: false,
                 isEditing: false,
-                days: initialDays, // Will be overwritten by localStorage if exists
+                days: initialDays, // Will be overwritten by localStorage
 
                 // Computed property for sorted reservations
                 get sortedReservations() {
@@ -446,15 +459,15 @@
                             }
                         });
                     });
-                    // Since we iterate days in order, this list is naturally sorted by date/time
                     return list;
                 },
 
                 initApp() {
-                    const savedData = localStorage.getItem('fukuoka_trip_data_v3');
+                    const savedData = localStorage.getItem('fukuoka_trip_data_v7');
                     if (savedData) {
                         try {
                             const parsed = JSON.parse(savedData);
+                            // Deep merge or overwrite if structure matches
                             if(parsed.days) this.days = parsed.days;
                             if(parsed.packingList) this.packingList = parsed.packingList;
                         } catch (e) {
@@ -477,7 +490,8 @@
                         type: '自訂',
                         note: '請輸入備註...',
                         imgKey: 'travel',
-                        isReservation: false
+                        isReservation: false,
+                        mapQuery: ''
                     });
                 },
 
@@ -487,19 +501,56 @@
                     }
                 },
 
+                // Image Upload Logic with Compression
+                uploadImage(event, eventIndex) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            
+                            // Compress logic: max width 800px
+                            const maxWidth = 800;
+                            let width = img.width;
+                            let height = img.height;
+
+                            if (width > maxWidth) {
+                                height *= maxWidth / width;
+                                width = maxWidth;
+                            }
+
+                            canvas.width = width;
+                            canvas.height = height;
+                            ctx.drawImage(img, 0, 0, width, height);
+
+                            // Compress to JPEG 0.7 quality
+                            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                            this.days[this.activeDay].events[eventIndex].attachedImage = dataUrl;
+                            this.saveData(); // Save immediately
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                },
+
                 saveData() {
                     const dataToSave = {
                         days: this.days,
                         packingList: this.packingList
                     };
-                    localStorage.setItem('fukuoka_trip_data_v3', JSON.stringify(dataToSave));
+                    // v7 key for new structure
+                    localStorage.setItem('fukuoka_trip_data_v7', JSON.stringify(dataToSave));
                     this.showSavedToast = true;
                     setTimeout(() => { this.showSavedToast = false; }, 2000);
                 },
 
                 resetData() {
-                    if(confirm('確定要重置所有資料嗎？這將會清除您新增的行程與勾選紀錄。')) {
-                        localStorage.removeItem('fukuoka_trip_data_v3');
+                    if(confirm('確定要重置所有資料嗎？(包含您上傳的照片與新增的行程)')) {
+                        localStorage.removeItem('fukuoka_trip_data_v7');
                         location.reload();
                     }
                 },
