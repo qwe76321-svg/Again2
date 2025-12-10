@@ -63,12 +63,14 @@
                     <i class="fas fa-check mr-1"></i> 已儲存
                 </div>
                 
-                <button @click="toggleEditMode()" 
-                        class="px-3 py-1 rounded-full text-xs font-bold transition-all shadow-sm border"
-                        :class="isEditing ? 'bg-gold text-white border-gold' : 'bg-white text-gray-500 border-gray-200'">
-                    <i class="fas" :class="isEditing ? 'fa-save' : 'fa-pen'"></i>
-                    <span x-text="isEditing ? '儲存' : '編輯'"></span>
-                </button>
+                <template x-if="currentTab === 'itinerary'">
+                    <button @click="toggleEditMode()" 
+                            class="px-3 py-1 rounded-full text-xs font-bold transition-all shadow-sm border"
+                            :class="isEditing ? 'bg-gold text-white border-gold' : 'bg-white text-gray-500 border-gray-200'">
+                        <i class="fas" :class="isEditing ? 'fa-save' : 'fa-pen'"></i>
+                        <span x-text="isEditing ? '儲存' : '編輯'"></span>
+                    </button>
+                </template>
             </div>
         </div>
 
@@ -141,19 +143,12 @@
                             <div class="h-32 w-full bg-gray-100 relative overflow-hidden group/img" @click="if(!isEditing) expanded = !expanded">
                                 <img :src="'https://loremflickr.com/800/400/' + (event.imgKey || 'japan,travel') + '/all?lock=' + (activeDay * 100 + idx)" 
                                      class="w-full h-full object-cover opacity-90 grayscale-[20%]" loading="lazy">
-                                
                                 <div class="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-white text-primary flex items-center justify-center shadow-md z-10">
                                     <i class="fas" :class="expanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
                                 </div>
-
                                 <template x-if="isEditing">
                                     <div class="absolute top-2 right-2 left-2">
-                                        <input type="text" x-model="event.mapQuery" class="w-full text-xs p-2 rounded bg-white/90 shadow text-primary focus:outline-none" placeholder="輸入 Google Maps 搜尋關鍵字 (如: 福岡塔)">
-                                    </div>
-                                </template>
-                                <template x-if="isEditing">
-                                    <div class="absolute bottom-2 left-2">
-                                        <input type="text" x-model="event.imgKey" class="w-32 text-[10px] p-1 rounded bg-white/80 shadow text-gray-600 focus:outline-none" placeholder="圖片關鍵字 (如: food)">
+                                        <input type="text" x-model="event.mapQuery" class="w-full text-xs p-2 rounded bg-white/90 shadow text-primary focus:outline-none" placeholder="輸入 Google Maps 搜尋關鍵字">
                                     </div>
                                 </template>
                             </div>
@@ -171,23 +166,20 @@
                                         <span class="text-[10px] px-2 py-1 bg-gray-50 text-gray-500 rounded-sm uppercase tracking-wider font-medium" x-text="event.type"></span>
                                     </template>
                                     <template x-if="isEditing">
-                                        <input type="text" x-model="event.type" class="text-[10px] bg-gray-50 border border-gray-200 rounded px-1 w-20" placeholder="標籤 (如: 美食)">
+                                        <input type="text" x-model="event.type" class="text-[10px] bg-gray-50 border border-gray-200 rounded px-1 w-20" placeholder="標籤">
                                     </template>
                                 </div>
 
                                 <div x-show="expanded || isEditing" x-collapse>
                                     <div class="mt-4 pt-4 border-t border-gray-100 text-sm text-gray-500 leading-relaxed font-light">
-                                        
                                         <template x-if="!isEditing">
                                             <div class="flex items-start gap-2 mb-3">
                                                 <i class="fas fa-sticky-note text-gold mt-1"></i>
                                                 <div x-html="event.note"></div>
                                             </div>
                                         </template>
-
                                         <template x-if="isEditing">
                                             <div class="mb-3">
-                                                <label class="text-[10px] font-bold text-gray-400 uppercase">備註 (支援 HTML)</label>
                                                 <textarea x-model="event.note" rows="4" class="w-full p-2 text-sm border border-gray-200 rounded bg-gray-50 focus:outline-none focus:border-gold"></textarea>
                                             </div>
                                         </template>
@@ -199,18 +191,15 @@
                                                     <button @click="event.attachedImage = null" class="text-alert text-[10px] hover:underline">刪除圖片</button>
                                                 </template>
                                             </p>
-                                            
                                             <template x-if="event.attachedImage">
                                                 <img :src="event.attachedImage" class="w-full rounded border border-gray-200 shadow-sm mb-2">
                                             </template>
-
                                             <template x-if="isEditing">
                                                 <div class="mt-2">
                                                     <label class="flex items-center justify-center w-full px-4 py-2 bg-white text-primary rounded-lg border border-dashed border-gray-300 cursor-pointer hover:border-gold hover:text-gold transition">
                                                         <i class="fas fa-camera mr-2"></i> 選擇照片
-                                                        <input type="file" accept="image/*" class="hidden" @change="uploadImage($event, idx)">
+                                                        <input type="file" accept="image/*" class="hidden" @change="uploadImage($event, idx, 'event')">
                                                     </label>
-                                                    <p class="text-[10px] text-gray-400 mt-1 text-center">圖片會自動壓縮以節省空間</p>
                                                 </div>
                                             </template>
                                         </div>
@@ -271,7 +260,6 @@
                 </template>
                 <div x-show="sortedReservations.length === 0" class="text-center py-10 text-gray-400">
                     目前沒有需要預約的項目。
-                    <br><span class="text-xs">(在編輯模式中勾選「+預約」即可加入)</span>
                 </div>
             </div>
         </div>
@@ -279,21 +267,42 @@
         <div x-show="currentTab === 'packing'" x-transition:enter="fade-enter" style="display: none;">
             <div class="mb-8 mt-2">
                 <h2 class="text-3xl font-serif text-primary">行李清單</h2>
-                <p class="text-sm text-gray-500 mt-1">檢查狀態會自動儲存</p>
+                <p class="text-sm text-gray-500 mt-1">可上傳 QR Code 或文件截圖</p>
             </div>
             <div class="space-y-6">
-                <template x-for="category in packingList">
+                <template x-for="(category, cIdx) in packingList">
                     <div>
                         <h4 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 ml-1" x-text="category.title"></h4>
                         <div class="bg-white rounded-lg shadow-soft overflow-hidden">
-                            <template x-for="item in category.items">
-                                <label class="checkbox-wrapper px-5 py-4 border-b border-gray-50 last:border-0 flex items-center gap-4 cursor-pointer hover:bg-gray-50 transition-colors">
-                                    <input type="checkbox" class="hidden" x-model="item.checked" @change="saveData()">
-                                    <div class="w-5 h-5 border border-gray-300 rounded flex items-center justify-center transition-colors">
-                                        <svg class="w-3 h-3 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            <template x-for="(item, iIdx) in category.items">
+                                <div class="border-b border-gray-50 last:border-0" x-data="{ showImg: false }">
+                                    <div class="px-5 py-4 flex items-center justify-between">
+                                        <label class="flex items-center gap-4 cursor-pointer flex-1">
+                                            <input type="checkbox" class="hidden" x-model="item.checked" @change="saveData()">
+                                            <div class="w-5 h-5 border border-gray-300 rounded flex items-center justify-center transition-colors">
+                                                <svg class="w-3 h-3 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                            </div>
+                                            <span class="text-primary text-sm font-medium transition-all" :class="item.checked ? 'text-gray-300 line-through' : ''" x-text="item.name"></span>
+                                        </label>
+                                        
+                                        <div class="flex items-center gap-2">
+                                            <template x-if="item.image">
+                                                <button @click="showImg = !showImg" class="text-xs text-gold font-bold border border-gold rounded px-2 py-1">
+                                                    <span x-text="showImg ? '關閉' : '查看圖片'"></span>
+                                                </button>
+                                            </template>
+                                            <label class="cursor-pointer text-gray-400 hover:text-gold transition">
+                                                <i class="fas fa-camera"></i>
+                                                <input type="file" accept="image/*" class="hidden" @change="uploadImage($event, null, 'packing', cIdx, iIdx)">
+                                            </label>
+                                        </div>
                                     </div>
-                                    <span class="text-primary text-sm font-medium transition-all" :class="item.checked ? 'text-gray-300 line-through' : ''" x-text="item.name"></span>
-                                </label>
+                                    
+                                    <div x-show="showImg && item.image" x-collapse class="px-5 pb-4">
+                                        <img :src="item.image" class="w-full rounded-lg border border-gray-200 shadow-sm">
+                                        <button @click="item.image = null; saveData();" class="mt-2 text-xs text-alert underline">刪除此圖片</button>
+                                    </div>
+                                </div>
                             </template>
                         </div>
                     </div>
@@ -349,7 +358,7 @@
                     { time: '10:00', title: '福岡玩具美術館', type: '體驗', imgKey: 'woodentoy', note: 'LaLaport 1F，開門即入場。', mapQuery: 'Fukuoka Toy Museum' },
                     { time: '12:45', title: '博多華味鳥 (博多站前)', type: '午餐', imgKey: 'hotpot,chicken', note: '午間限定水炊御膳。', mapQuery: 'Hakata Hanamidori Hakata Station', isReservation: true, booked: false },
                     { time: '14:45', title: '天神大名潮流區', type: '購物', imgKey: 'streetwear', note: 'Supreme, Neighborhood, Stussy。', mapQuery: 'Supreme Fukuoka' },
-                    { time: '16:00', title: 'THE FULL FULL TENJIN', type: '美食', imgKey: 'bakery,bread', note: '明太子法國麵包名店，適合下午茶。', mapQuery: 'THE FULL FULL TENJIN', isReservation: true, booked: false },
+                    { time: '16:00', title: 'THE FULL FULL TENJIN', type: '美食', imgKey: 'bakery,bread', note: '明太子法國麵包名店，適合下午茶。', mapQuery: 'Full Full Pan to Wine Tenjin', isReservation: true, booked: false },
                     { time: '16:45', title: '大名花園城聖誕市集', type: '聖誕', imgKey: 'christmas,market', note: 'Christmas Gate 市集，喝杯熱紅酒休息。', isChristmas: true, mapQuery: 'Fukuoka Daimyo Garden City' },
                     { time: '19:30', title: 'Sky Rental Store 取車', type: '租車', imgKey: 'car,keys', note: '設定往高千穗的導航。', isReservation: true, booked: false, mapQuery: 'Sky Rental Car Fukuoka' }
                 ]
@@ -465,7 +474,7 @@
                 },
 
                 initApp() {
-                    const savedData = localStorage.getItem('fukuoka_trip_data_v7');
+                    const savedData = localStorage.getItem('fukuoka_trip_data_v8');
                     if (savedData) {
                         try {
                             const parsed = JSON.parse(savedData);
@@ -503,8 +512,9 @@
                     }
                 },
 
-                // Image Upload Logic with Compression
-                uploadImage(event, eventIndex) {
+                // Generic Image Upload Logic with Compression
+                // mode: 'event' (Itinerary) or 'packing' (Packing List)
+                uploadImage(event, idx, mode, catIdx = null, itemIdx = null) {
                     const file = event.target.files[0];
                     if (!file) return;
 
@@ -531,7 +541,13 @@
 
                             // Compress to JPEG 0.7 quality
                             const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                            this.days[this.activeDay].events[eventIndex].attachedImage = dataUrl;
+                            
+                            if (mode === 'event') {
+                                this.days[this.activeDay].events[idx].attachedImage = dataUrl;
+                            } else if (mode === 'packing') {
+                                this.packingList[catIdx].items[itemIdx].image = dataUrl;
+                            }
+                            
                             this.saveData(); // Save immediately
                         };
                         img.src = e.target.result;
@@ -544,15 +560,15 @@
                         days: this.days,
                         packingList: this.packingList
                     };
-                    // v7 key for new structure
-                    localStorage.setItem('fukuoka_trip_data_v7', JSON.stringify(dataToSave));
+                    // v8 key for new structure
+                    localStorage.setItem('fukuoka_trip_data_v8', JSON.stringify(dataToSave));
                     this.showSavedToast = true;
                     setTimeout(() => { this.showSavedToast = false; }, 2000);
                 },
 
                 resetData() {
                     if(confirm('確定要重置所有資料嗎？(包含您上傳的照片與新增的行程)')) {
-                        localStorage.removeItem('fukuoka_trip_data_v7');
+                        localStorage.removeItem('fukuoka_trip_data_v8');
                         location.reload();
                     }
                 },
@@ -563,30 +579,33 @@
 
                 packingList: [
                     {
-                        title: '重要文件',
+                        title: '重要文件 (Documents)',
                         items: [
-                            { name: '護照 (效期6個月以上)', checked: false },
-                            { name: 'VJW QR Code 截圖', checked: false },
-                            { name: '台灣駕照正本', checked: false },
-                            { name: '日文駕照譯本', checked: false },
-                            { name: '機票/訂房憑證', checked: false }
+                            { name: '護照 (效期6個月以上)', checked: false, image: null },
+                            { name: 'VJW QR Code (蔡博晏)', checked: false, image: null },
+                            { name: 'VJW QR Code (蔡宛蓁)', checked: false, image: null },
+                            { name: 'VJW QR Code (蔡芮蕎)', checked: false, image: null },
+                            { name: '台灣駕照正本', checked: false, image: null },
+                            { name: '日文駕照譯本', checked: false, image: null },
+                            { name: '機票/訂房憑證', checked: false, image: null },
+                            { name: '旅遊保險單', checked: false, image: null }
                         ]
                     },
                     {
                         title: '金錢與網路',
                         items: [
-                            { name: '日幣現金', checked: false },
-                            { name: '信用卡 (海外回饋)', checked: false },
-                            { name: 'Sim卡 / 漫遊設定', checked: false }
+                            { name: '日幣現金', checked: false, image: null },
+                            { name: '信用卡 (海外回饋)', checked: false, image: null },
+                            { name: 'Sim卡 / 漫遊設定', checked: false, image: null }
                         ]
                     },
                     {
                         title: '隨身用品',
                         items: [
-                            { name: '行動電源', checked: false },
-                            { name: '充電線/插頭', checked: false },
-                            { name: '個人藥品', checked: false },
-                            { name: '好走的鞋子', checked: false }
+                            { name: '行動電源', checked: false, image: null },
+                            { name: '充電線/插頭', checked: false, image: null },
+                            { name: '個人藥品', checked: false, image: null },
+                            { name: '好走的鞋子', checked: false, image: null }
                         ]
                     }
                 ]
