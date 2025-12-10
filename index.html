@@ -57,13 +57,18 @@
             <div>
                 <h1 class="text-2xl font-serif italic font-bold text-primary tracking-wide">Fukuoka <span class="text-gold">Xmas</span></h1>
             </div>
-            <div class="flex items-center gap-2">
+            
+            <div class="flex items-center gap-3">
                 <div x-show="showSavedToast" class="text-[10px] text-success font-bold flex items-center bg-green-50 px-2 py-1 rounded-full border border-green-100" style="display: none;" x-transition>
                     <i class="fas fa-check mr-1"></i> 已儲存
                 </div>
-                <div class="text-xs font-bold tracking-widest uppercase text-gold border border-gold px-2 py-1 rounded-sm">
-                    12月 12-19
-                </div>
+                
+                <button @click="toggleEditMode()" 
+                        class="px-3 py-1 rounded-full text-xs font-bold transition-all shadow-sm border"
+                        :class="isEditing ? 'bg-gold text-white border-gold' : 'bg-white text-gray-500 border-gray-200'">
+                    <i class="fas" :class="isEditing ? 'fa-save' : 'fa-pen'"></i>
+                    <span x-text="isEditing ? '儲存' : '編輯'"></span>
+                </button>
             </div>
         </div>
 
@@ -87,88 +92,147 @@
             
             <div class="mb-8 pl-2 border-l-2 border-gold" x-key="activeDay">
                 <span class="text-gray-400 text-xs font-bold uppercase tracking-widest block mb-1" x-text="days[activeDay].title.split(':')[0]"></span>
-                <h2 class="text-3xl font-serif text-primary leading-none" x-text="days[activeDay].title.split(':')[1]"></h2>
-                <p class="text-sm text-gray-500 mt-2 font-light" x-text="days[activeDay].desc"></p>
+                <template x-if="!isEditing">
+                    <h2 class="text-3xl font-serif text-primary leading-none" x-text="days[activeDay].title.split(':')[1]"></h2>
+                </template>
+                <template x-if="isEditing">
+                    <input type="text" x-model="days[activeDay].title" class="text-2xl font-serif text-primary border-b border-gold bg-transparent w-full focus:outline-none mb-2">
+                </template>
+                
+                <template x-if="!isEditing">
+                    <p class="text-sm text-gray-500 mt-2 font-light" x-text="days[activeDay].desc"></p>
+                </template>
+                <template x-if="isEditing">
+                    <input type="text" x-model="days[activeDay].desc" class="text-sm text-gray-500 border-b border-gray-200 bg-transparent w-full focus:outline-none mt-2" placeholder="輸入當日簡介...">
+                </template>
             </div>
 
-            <template x-if="days[activeDay].specialAlert">
-                <div class="bg-white border border-gray-100 rounded-lg p-5 mb-8 shadow-soft relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-1 h-full bg-alert"></div>
-                    <h4 class="text-alert font-bold text-xs uppercase tracking-wide mb-2 flex items-center"><i class="fas fa-exclamation-circle mr-2"></i> 今日重點 Note</h4>
-                    <p class="text-sm text-gray-600 leading-relaxed" x-html="days[activeDay].specialAlert"></p>
-                </div>
-            </template>
-
-            <div class="relative ml-2 space-y-10 pb-12 border-l border-gray-200">
-                <template x-for="(event, idx) in days[activeDay].events">
+            <div class="relative ml-2 space-y-10 pb-20 border-l border-gray-200">
+                <template x-for="(event, idx) in days[activeDay].events" :key="idx">
                     <div class="relative pl-8 group" x-data="{ expanded: false }">
                         <div class="absolute -left-[5px] top-2 w-[10px] h-[10px] rounded-full border-2 border-bg transition-all duration-300"
                              :class="event.isChristmas ? 'bg-christmas' : (event.warning ? 'bg-alert' : 'bg-gold')"></div>
                         
-                        <div class="flex items-center gap-3 mb-3">
-                            <span class="text-xs font-mono font-bold text-gray-400" x-text="event.time"></span>
+                        <div class="flex flex-wrap items-center gap-3 mb-3">
+                            <template x-if="!isEditing">
+                                <span class="text-xs font-mono font-bold text-gray-400" x-text="event.time"></span>
+                            </template>
+                            <template x-if="isEditing">
+                                <input type="text" x-model="event.time" class="text-xs font-mono font-bold text-primary border border-gray-300 rounded px-1 w-16" placeholder="00:00">
+                            </template>
+
                             <template x-if="event.isReservation">
-                                <span class="text-[9px] text-alert border border-alert px-1.5 py-px rounded-full uppercase font-bold tracking-wide">需預約</span>
+                                <span class="text-[9px] text-alert border border-alert px-1.5 py-px rounded-full uppercase font-bold tracking-wide cursor-pointer" @click="if(isEditing) event.isReservation = !event.isReservation">需預約</span>
                             </template>
-                            <template x-if="event.warning && !event.isReservation">
-                                <span class="text-[9px] text-alert border border-alert px-1.5 py-px rounded-full uppercase font-bold tracking-wide">重要</span>
+                            <template x-if="!event.isReservation && isEditing">
+                                <span class="text-[9px] text-gray-300 border border-gray-300 px-1.5 py-px rounded-full uppercase font-bold tracking-wide cursor-pointer hover:border-alert hover:text-alert" @click="event.isReservation = true">+預約</span>
                             </template>
+                            
                             <template x-if="event.isChristmas">
-                                <span class="text-[9px] text-christmas border border-christmas px-1.5 py-px rounded-full uppercase font-bold tracking-wide">聖誕限定</span>
+                                <span class="text-[9px] text-christmas border border-christmas px-1.5 py-px rounded-full uppercase font-bold tracking-wide cursor-pointer" @click="if(isEditing) event.isChristmas = !event.isChristmas">聖誕</span>
+                            </template>
+                            
+                            <template x-if="isEditing">
+                                <button @click="deleteEvent(idx)" class="ml-auto text-alert text-xs hover:bg-red-50 p-1 rounded"><i class="fas fa-trash"></i></button>
                             </template>
                         </div>
                         
                         <div class="bg-card rounded-xl overflow-hidden shadow-soft transition-all duration-500">
-                            <div class="h-32 w-full bg-gray-100 relative overflow-hidden" @click="expanded = !expanded">
+                            <div class="h-32 w-full bg-gray-100 relative overflow-hidden group/img" @click="if(!isEditing) expanded = !expanded">
                                 <img :src="'https://loremflickr.com/800/400/' + (event.imgKey || 'japan,travel') + '/all?lock=' + (activeDay * 100 + idx)" 
                                      class="w-full h-full object-cover opacity-90 grayscale-[20%]" loading="lazy">
+                                
                                 <div class="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-white text-primary flex items-center justify-center shadow-md z-10">
                                     <i class="fas" :class="expanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
                                 </div>
+
+                                <template x-if="isEditing">
+                                    <div class="absolute top-2 right-2 left-2">
+                                        <input type="text" x-model="event.mapQuery" class="w-full text-xs p-2 rounded bg-white/90 shadow text-primary focus:outline-none" placeholder="輸入 Google Maps 搜尋關鍵字 (如: 福岡塔)">
+                                    </div>
+                                </template>
+                                <template x-if="isEditing">
+                                    <div class="absolute bottom-2 left-2">
+                                        <input type="text" x-model="event.imgKey" class="w-32 text-[10px] p-1 rounded bg-white/80 shadow text-gray-600 focus:outline-none" placeholder="圖片關鍵字 (如: food)">
+                                    </div>
+                                </template>
                             </div>
                             
                             <div class="p-5">
-                                <h3 class="font-bold text-lg text-primary mb-1 font-serif tracking-wide" x-text="event.title"></h3>
+                                <template x-if="!isEditing">
+                                    <h3 class="font-bold text-lg text-primary mb-1 font-serif tracking-wide" x-text="event.title"></h3>
+                                </template>
+                                <template x-if="isEditing">
+                                    <input type="text" x-model="event.title" class="font-bold text-lg text-primary border-b border-gray-200 w-full mb-2 bg-transparent focus:outline-none" placeholder="行程標題">
+                                </template>
+
                                 <div class="flex flex-wrap gap-2 mb-2">
-                                    <span class="text-[10px] px-2 py-1 bg-gray-50 text-gray-500 rounded-sm uppercase tracking-wider font-medium" x-text="event.type"></span>
+                                    <template x-if="!isEditing">
+                                        <span class="text-[10px] px-2 py-1 bg-gray-50 text-gray-500 rounded-sm uppercase tracking-wider font-medium" x-text="event.type"></span>
+                                    </template>
+                                    <template x-if="isEditing">
+                                        <input type="text" x-model="event.type" class="text-[10px] bg-gray-50 border border-gray-200 rounded px-1 w-20" placeholder="標籤 (如: 美食)">
+                                    </template>
                                 </div>
 
-                                <div x-show="expanded" x-collapse>
+                                <div x-show="expanded || isEditing" x-collapse>
                                     <div class="mt-4 pt-4 border-t border-gray-100 text-sm text-gray-500 leading-relaxed font-light">
-                                        <div class="flex items-start gap-2 mb-3">
-                                            <i class="fas fa-sticky-note text-gold mt-1"></i>
-                                            <div x-html="event.note"></div>
-                                        </div>
+                                        
+                                        <template x-if="!isEditing">
+                                            <div class="flex items-start gap-2 mb-3">
+                                                <i class="fas fa-sticky-note text-gold mt-1"></i>
+                                                <div x-html="event.note"></div>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="isEditing">
+                                            <div class="mb-3">
+                                                <label class="text-[10px] font-bold text-gray-400 uppercase">備註 (支援 HTML)</label>
+                                                <textarea x-model="event.note" rows="4" class="w-full p-2 text-sm border border-gray-200 rounded bg-gray-50 focus:outline-none focus:border-gold"></textarea>
+                                            </div>
+                                        </template>
                                         
                                         <template x-if="event.attachedImage">
-                                            <div class="mt-3">
-                                                <p class="text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">附加圖片 / Attachment</p>
-                                                <img :src="event.attachedImage" class="w-full rounded-lg border border-gray-200 shadow-sm" alt="Event Attachment">
-                                                <p class="text-[10px] text-gray-400 mt-1 italic text-center">
-                                                    *若圖片未顯示，請確認檔名是否為 flight_ticket.jpg 並已上傳
-                                                </p>
+                                            <div class="mt-3 relative">
+                                                <p class="text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">附加圖片</p>
+                                                <img :src="event.attachedImage" class="w-full rounded-lg border border-gray-200 shadow-sm">
+                                                <template x-if="isEditing">
+                                                    <input type="text" x-model="event.attachedImage" class="mt-2 w-full text-xs p-1 border border-gray-200 rounded" placeholder="圖片檔名 (如: ticket.jpg)">
+                                                </template>
                                             </div>
+                                        </template>
+                                        
+                                        <template x-if="!isEditing && event.mapQuery">
+                                            <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(event.mapQuery)" target="_blank" class="block mt-4 text-center py-2 text-xs font-bold text-primary border border-gray-200 rounded hover:bg-gray-50">
+                                                <i class="fas fa-map-marker-alt mr-1"></i> 開啟 Google Maps
+                                            </a>
                                         </template>
                                     </div>
                                 </div>
 
-                                <button @click="expanded = !expanded" class="w-full mt-3 py-2 text-xs font-bold text-gray-400 border border-gray-100 rounded hover:bg-gray-50 transition-colors uppercase tracking-widest">
-                                    <span x-text="expanded ? '收起備註' : '查看備註'"></span>
-                                </button>
+                                <template x-if="!isEditing">
+                                    <button @click="expanded = !expanded" class="w-full mt-3 py-2 text-xs font-bold text-gray-400 border border-gray-100 rounded hover:bg-gray-50 transition-colors uppercase tracking-widest">
+                                        <span x-text="expanded ? '收起備註' : '查看備註'"></span>
+                                    </button>
+                                </template>
                             </div>
                         </div>
                     </div>
+                </template>
+
+                <template x-if="isEditing">
+                    <button @click="addEvent(activeDay)" class="w-full py-4 border-2 border-dashed border-gray-300 text-gray-400 rounded-xl font-bold hover:border-gold hover:text-gold transition-colors">
+                        <i class="fas fa-plus-circle mr-2"></i> 新增行程
+                    </button>
                 </template>
             </div>
         </div>
 
         <div x-show="currentTab === 'booking'" x-transition:enter="fade-enter" style="display: none;">
-            
             <div class="mb-8 mt-2">
                 <h2 class="text-3xl font-serif text-primary">預約管理</h2>
                 <p class="text-sm text-gray-500 mt-1">必做預約 (依照日期順序排列)</p>
             </div>
-
             <div class="space-y-4">
                 <template x-for="item in sortedReservations" :key="item.id">
                     <label class="checkbox-wrapper bg-white p-5 rounded-lg shadow-soft flex items-start gap-4 cursor-pointer select-none transition-all duration-300"
@@ -183,27 +247,26 @@
                             <div class="flex justify-between items-start">
                                 <div class="text-xs font-bold text-gray-400 uppercase tracking-wider" x-text="item.dayStr"></div>
                             </div>
-                            <h3 class="font-bold text-lg mt-1 transition-all" 
-                                :class="item.ref.booked ? 'text-gray-400 line-through' : 'text-primary'"
-                                x-text="item.ref.title"></h3>
-                            <div class="flex items-center gap-2 font-mono text-sm font-bold mt-1 mb-2"
-                                 :class="item.ref.booked ? 'text-gray-400' : 'text-gold'">
+                            <h3 class="font-bold text-lg mt-1 transition-all" :class="item.ref.booked ? 'text-gray-400 line-through' : 'text-primary'" x-text="item.ref.title"></h3>
+                            <div class="flex items-center gap-2 font-mono text-sm font-bold mt-1 mb-2" :class="item.ref.booked ? 'text-gray-400' : 'text-gold'">
                                 <i class="far fa-clock"></i> <span x-text="item.ref.time"></span>
                             </div>
-                            <p class="text-sm text-gray-500 font-light truncate" x-text="item.ref.note.replace(/<[^>]*>/g, '')"></p>
+                            <p class="text-sm text-gray-500 font-light truncate" x-text="item.ref.note ? item.ref.note.replace(/<[^>]*>/g, '') : ''"></p>
                         </div>
                     </label>
                 </template>
+                <div x-show="sortedReservations.length === 0" class="text-center py-10 text-gray-400">
+                    目前沒有需要預約的項目。
+                    <br><span class="text-xs">(在編輯模式中勾選「+預約」即可加入)</span>
+                </div>
             </div>
         </div>
 
         <div x-show="currentTab === 'packing'" x-transition:enter="fade-enter" style="display: none;">
-            
             <div class="mb-8 mt-2">
                 <h2 class="text-3xl font-serif text-primary">行李清單</h2>
                 <p class="text-sm text-gray-500 mt-1">檢查狀態會自動儲存</p>
             </div>
-
             <div class="space-y-6">
                 <template x-for="category in packingList">
                     <div>
@@ -215,18 +278,15 @@
                                     <div class="w-5 h-5 border border-gray-300 rounded flex items-center justify-center transition-colors">
                                         <svg class="w-3 h-3 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                     </div>
-                                    <span class="text-primary text-sm font-medium transition-all"
-                                          :class="item.checked ? 'text-gray-300 line-through' : ''"
-                                          x-text="item.name"></span>
+                                    <span class="text-primary text-sm font-medium transition-all" :class="item.checked ? 'text-gray-300 line-through' : ''" x-text="item.name"></span>
                                 </label>
                             </template>
                         </div>
                     </div>
                 </template>
             </div>
-
             <button @click="resetData()" class="w-full mt-10 py-3 border border-red-200 text-red-400 rounded-lg text-sm hover:bg-red-50 transition mb-6">
-                <i class="fas fa-trash-alt mr-2"></i> 重置所有勾選狀態
+                <i class="fas fa-trash-alt mr-2"></i> 重置所有設定 (清空暫存)
             </button>
         </div>
 
@@ -251,12 +311,128 @@
     </nav>
 
     <script>
+        // Initial Data (Fallback)
+        const initialDays = [
+            {
+                shortDate: '12/12', weekday: '週五',
+                title: 'Day 1: 抵達福岡',
+                desc: 'Arrival & Christmas Lights',
+                specialAlert: '建議直接搭計程車前往住宿 (¥2,000)。晚上可散步去看藍色燈海。',
+                events: [
+                    { time: '19:35', title: '抵達福岡機場', type: '航班', imgKey: 'airport,night', note: '<strong>中華航空 CI116</strong><br>TPE 16:25 ➔ FUK 19:35<br>飛行時間 2h10m<br>入境手續與領行李。', attachedImage: 'flight_ticket.jpg' },
+                    { time: '21:00', title: '搭計程車前往住宿', type: '交通', imgKey: 'taxi,japan', note: '前往 Sumiyoshi apartment。' },
+                    { time: '21:30', title: 'Sumiyoshi apartment', type: '住宿', imgKey: 'apartment,interior', note: '辦理入住。' },
+                    { time: '22:00', title: '博多車站光之街', type: '聖誕', imgKey: 'christmas,lights', note: '藍色燈海散步 (Hikari no Machi)，感受聖誕氣氛。', isChristmas: true }
+                ]
+            },
+            {
+                shortDate: '12/13', weekday: '週六',
+                title: 'Day 2: 親子 & 潮流',
+                desc: 'Toys, Hotpot & Streetwear',
+                specialAlert: '中午餐廳務必預約。下午行程包含聖誕市集與麵包名店。',
+                events: [
+                    { time: '08:30', title: 'Fuk Coffee', type: '咖啡', imgKey: 'coffee,latte', note: '晨間咖啡時光。', mapQuery: 'FUK COFFEE' },
+                    { time: '10:00', title: '福岡玩具美術館', type: '體驗', imgKey: 'woodentoy', note: 'LaLaport 1F，開門即入場。', mapQuery: 'Fukuoka Toy Museum' },
+                    { time: '12:45', title: '博多華味鳥 (博多站前)', type: '午餐', imgKey: 'hotpot,chicken', note: '午間限定水炊御膳。', mapQuery: 'Hakata Hanamidori Hakata Station', isReservation: true, booked: false },
+                    { time: '14:45', title: '天神大名潮流區', type: '購物', imgKey: 'streetwear', note: 'Supreme, Neighborhood, Stussy。', mapQuery: 'Supreme Fukuoka' },
+                    { time: '16:00', title: 'THE FULL FULL TENJIN', type: '美食', imgKey: 'bakery,bread', note: '明太子法國麵包名店，適合下午茶。', mapQuery: 'Full Full Pan to Wine Tenjin', isReservation: true, booked: false },
+                    { time: '16:45', title: '大名花園城聖誕市集', type: '聖誕', imgKey: 'christmas,market', note: 'Christmas Gate 市集，喝杯熱紅酒休息。', isChristmas: true, mapQuery: 'Fukuoka Daimyo Garden City' },
+                    { time: '19:30', title: 'Sky Rental Store 取車', type: '租車', imgKey: 'car,keys', note: '設定往高千穗的導航。', isReservation: true, booked: false, mapQuery: 'Sky Rental Car Fukuoka' }
+                ]
+            },
+            {
+                shortDate: '12/14', weekday: '週日',
+                title: 'Day 3: 高千穗 & 阿蘇',
+                desc: 'Nature & Volcano',
+                specialAlert: '<strong>早鳥衝刺日！</strong> 06:30 出門。前往由布院山路無路燈，請慢行。',
+                events: [
+                    { time: '06:30', title: '準時出門', type: '交通', imgKey: 'highway,sunrise', note: '前往高千穗，車程約 3 小時。', warning: true },
+                    { time: '09:30', title: '高千穗峽 划船', type: '體驗', imgKey: 'boat,waterfall', note: '划船 40 分鐘 + 拍照。', mapQuery: 'Takachiho Gorge Boat Rental', isReservation: true, booked: false },
+                    { time: '11:30', title: '千穗之家 流水麵', type: '午餐', imgKey: 'noodles', mapQuery: 'Chiho no Ie' },
+                    { time: '14:00', title: '阿蘇中岳火山口', type: '景點', imgKey: 'volcano', mapQuery: 'Mount Aso Nakadake Crater' },
+                    { time: '15:00', title: '草千里 Green Park', type: '景點', imgKey: 'grassland', mapQuery: 'Kusasenri' },
+                    { time: '20:30', title: '湯布院 良旅屋 ETAVIA', type: '住宿', imgKey: 'ryokan', mapQuery: 'Yufuin Ryoryoya ETAVIA' }
+                ]
+            },
+            {
+                shortDate: '12/15', weekday: '週一',
+                title: 'Day 4: 動物園 & 美術館',
+                desc: 'Safari & Art Museum',
+                specialAlert: '早上搶叢林巴士票，下午美術館需預約。',
+                events: [
+                    { time: '08:30', title: '九州自然動物園', type: '體驗', imgKey: 'lion,safari', note: '09:00 開園，搶最早場的叢林巴士。', mapQuery: 'African Safari Japan', isReservation: true, booked: false },
+                    { time: '09:30', title: '叢林巴士體驗', type: '體驗', imgKey: 'bus,zoo', note: '餵食體驗約 50 分鐘。' },
+                    { time: '13:00', title: 'COMICO ART MUSEUM', type: '藝術', imgKey: 'museum,architecture', note: '隈研吾建築，村上隆作品。', mapQuery: 'COMICO ART MUSEUM YUFUIN', isReservation: true, booked: false },
+                    { time: '14:00', title: '湯之坪街道 & 金鱗湖', type: '景點', imgKey: 'lake,mist', note: '購買 B-Speak 蛋糕捲。', mapQuery: 'Kinrin Lake' },
+                    { time: '18:30', title: '燒肉 多牛 (博多站南)', type: '晚餐', imgKey: 'yakiniku', note: 'CP值極高和牛，需現場排隊。', mapQuery: 'Yakiniku Tagyu Hakata' }
+                ]
+            },
+            {
+                shortDate: '12/16', weekday: '週二',
+                title: 'Day 5: 糸島海線',
+                desc: 'Strawberry & Seaside',
+                specialAlert: '早上先採草莓 (已預約)。晚上還車前記得加油。',
+                events: [
+                    { time: '09:30', title: 'Itoshima Berry Farm', type: '體驗', imgKey: 'strawberry', note: '採草莓體驗。', mapQuery: 'Itoshima Berry Farm', isReservation: true, booked: false },
+                    { time: '12:00', title: '海鮮餐廳 Futamigaura', type: '午餐', imgKey: 'seafood,ocean', note: '海景第一排午餐。', mapQuery: 'Itoshima Seafood Restaurant Futamigaura' },
+                    { time: '13:30', title: '花鹽布丁 & 觀光船', type: '景點', imgKey: 'pudding', note: '視風浪決定是否搭芥屋大門觀光船。', mapQuery: 'Mataichi no Shio' },
+                    { time: '19:30', title: 'Sky Rental Store 還車', type: '租車', imgKey: 'car,gas', note: '還車前請加滿油。', mapQuery: 'Sky Rental Car Fukuoka' },
+                    { time: '20:00', title: '資桑烏龍麵', type: '晚餐', imgKey: 'udon', note: '推薦：肉牛蒡天婦羅烏龍麵。', mapQuery: 'Sukesan Udon' }
+                ]
+            },
+            {
+                shortDate: '12/17', weekday: '週三',
+                title: 'Day 6: 太宰府電車旅',
+                desc: 'Shrine, Market & Yatai',
+                specialAlert: '太宰府電車輕鬆遊。晚上逛天神聖誕市集與中洲夜景。',
+                events: [
+                    { time: '10:00', title: '前往太宰府', type: '交通', imgKey: 'train,japan', note: '天神站搭乘西鐵電車。' },
+                    { time: '11:00', title: '太宰府表參道', type: '景點', imgKey: 'starbucks,japan', note: '吃梅枝餅、逛星巴克概念店。', mapQuery: 'Dazaifu Tenmangu' },
+                    { time: '13:30', title: '太宰府天滿宮', type: '景點', imgKey: 'shrine,bull', note: '參拜學問之神。' },
+                    { time: '14:30', title: '太宰府遊樂園', type: '體驗', imgKey: 'amusementpark', note: '復古樂園，小孩放電。' },
+                    { time: '17:40', title: '天神聖誕市集', type: '聖誕', imgKey: 'christmas,santa', note: '市役所前廣場，氣氛最熱鬧。', isChristmas: true, mapQuery: 'Fukuoka City Hall' },
+                    { time: '18:30', title: '天神屋台 小金ちゃん', type: '晚餐', imgKey: 'foodstall', note: '體驗炒拉麵。', mapQuery: 'Kokinchantei' },
+                    { time: '20:00', title: '中洲光之大道', type: '聖誕', imgKey: 'night,river', note: '那珂川沿岸金色燈飾散步。', isChristmas: true }
+                ]
+            },
+            {
+                shortDate: '12/18', weekday: '週四',
+                title: 'Day 7: 聖誕市集壓軸',
+                desc: 'Anpanman & Hakata Xmas',
+                specialAlert: '麵包超人館內解決午餐最方便。晚上博多站聖誕市集。',
+                events: [
+                    { time: '10:00', title: '麵包超人博物館', type: '體驗', imgKey: 'anpanman', note: '午餐於館內享用。', mapQuery: 'Fukuoka Anpanman Children\'s Museum' },
+                    { time: '16:00', title: '博多運河城', type: '購物', imgKey: 'fountain', note: '觀賞聖誕水舞秀。', mapQuery: 'Canal City Hakata' },
+                    { time: '18:30', title: '博多車站聖誕市集', type: '聖誕', imgKey: 'christmasmarket,night', note: '旅程壓軸！熱紅酒、美食與音樂表演。', isChristmas: true, mapQuery: 'JR Hakata Station' }
+                ]
+            },
+            {
+                shortDate: '12/19', weekday: '週五',
+                title: 'Day 8: 最後衝刺',
+                desc: 'Shopping & Buddha',
+                specialAlert: '早上先寄放行李，利用地鐵移動。',
+                events: [
+                    { time: '09:00', title: '退房 & 寄放行李', type: '交通', imgKey: 'luggage', note: '搭計程車至博多車站置物櫃寄放。' },
+                    { time: '09:30', title: '東長寺 (福岡大佛)', type: '景點', imgKey: 'buddha', note: '地鐵祇園站。參觀木造大佛。', mapQuery: 'Tochoji Temple' },
+                    { time: '10:30', title: '大濠公園 & 福岡城跡', type: '景點', imgKey: 'park,lake', note: '星巴克喝咖啡、看草間彌生南瓜。', mapQuery: 'Ohori Park' },
+                    { time: '12:15', title: '博多一双拉麵', type: '午餐', imgKey: 'ramen,bubbles', note: '最後午餐 (博多駅東本店)。', mapQuery: 'Hakata Issou' },
+                    { time: '14:00', title: '博多站伴手禮衝刺', type: '購物', imgKey: 'souvenir,japan', note: 'Ming 或 阪急地下街。必買：努努雞、Menbei。' },
+                    { time: '16:00', title: '燕子林廣場 (RF)', type: '景點', imgKey: 'rooftop,city', note: '俯瞰福岡市景。' },
+                    { time: '17:00', title: '前往福岡機場', type: '交通', imgKey: 'airport,taxi', note: '搭計程車前往最省力。' },
+                    { time: '20:35', title: '班機起飛', type: '航班', imgKey: 'airplane', note: '<strong>中華航空 CI117</strong><br>FUK 20:35 ➔ TPE 22:20<br>飛行時間 2h45m<br>平安返台。', attachedImage: 'flight_ticket.jpg' }
+                ]
+            }
+        ];
+
         function tripApp() {
             return {
                 currentTab: 'itinerary',
                 activeDay: 0,
                 showSavedToast: false,
-                
+                isEditing: false,
+                days: initialDays, // Will be overwritten by localStorage if exists
+
+                // Computed property for sorted reservations
                 get sortedReservations() {
                     let list = [];
                     this.days.forEach((day, dIdx) => {
@@ -270,66 +446,60 @@
                             }
                         });
                     });
+                    // Since we iterate days in order, this list is naturally sorted by date/time
                     return list;
                 },
 
                 initApp() {
-                    const savedData = localStorage.getItem('fukuoka_trip_data_v2');
+                    const savedData = localStorage.getItem('fukuoka_trip_data_v3');
                     if (savedData) {
                         try {
                             const parsed = JSON.parse(savedData);
-                            this.restoreState(parsed);
+                            if(parsed.days) this.days = parsed.days;
+                            if(parsed.packingList) this.packingList = parsed.packingList;
                         } catch (e) {
                             console.error('Data restore failed', e);
                         }
                     }
                 },
 
+                toggleEditMode() {
+                    this.isEditing = !this.isEditing;
+                    if(!this.isEditing) {
+                        this.saveData();
+                    }
+                },
+
+                addEvent(dayIndex) {
+                    this.days[dayIndex].events.push({
+                        time: '00:00',
+                        title: '新行程',
+                        type: '自訂',
+                        note: '請輸入備註...',
+                        imgKey: 'travel',
+                        isReservation: false
+                    });
+                },
+
+                deleteEvent(eventIndex) {
+                    if(confirm('確定要刪除此行程嗎？')) {
+                        this.days[this.activeDay].events.splice(eventIndex, 1);
+                    }
+                },
+
                 saveData() {
                     const dataToSave = {
-                        bookings: [],
-                        packing: []
+                        days: this.days,
+                        packingList: this.packingList
                     };
-                    
-                    this.days.forEach((day, dIdx) => {
-                        day.events.forEach((event, eIdx) => {
-                            if(event.isReservation) {
-                                dataToSave.bookings.push({ d: dIdx, e: eIdx, booked: event.booked });
-                            }
-                        });
-                    });
-
-                    this.packingList.forEach((cat, cIdx) => {
-                        cat.items.forEach((item, iIdx) => {
-                            dataToSave.packing.push({ c: cIdx, i: iIdx, checked: item.checked });
-                        });
-                    });
-
-                    localStorage.setItem('fukuoka_trip_data_v2', JSON.stringify(dataToSave));
+                    localStorage.setItem('fukuoka_trip_data_v3', JSON.stringify(dataToSave));
                     this.showSavedToast = true;
                     setTimeout(() => { this.showSavedToast = false; }, 2000);
                 },
 
-                restoreState(saved) {
-                    if (saved.bookings) {
-                        saved.bookings.forEach(rec => {
-                            if (this.days[rec.d] && this.days[rec.d].events[rec.e]) {
-                                this.days[rec.d].events[rec.e].booked = rec.booked;
-                            }
-                        });
-                    }
-                    if (saved.packing) {
-                        saved.packing.forEach(rec => {
-                            if (this.packingList[rec.c] && this.packingList[rec.c].items[rec.i]) {
-                                this.packingList[rec.c].items[rec.i].checked = rec.checked;
-                            }
-                        });
-                    }
-                },
-
                 resetData() {
-                    if(confirm('確定要清除所有勾選紀錄嗎？')) {
-                        localStorage.removeItem('fukuoka_trip_data_v2');
+                    if(confirm('確定要重置所有資料嗎？這將會清除您新增的行程與勾選紀錄。')) {
+                        localStorage.removeItem('fukuoka_trip_data_v3');
                         location.reload();
                     }
                 },
@@ -340,167 +510,30 @@
 
                 packingList: [
                     {
-                        title: '重要文件 (Documents)',
+                        title: '重要文件',
                         items: [
-                            { name: '護照 (檢查 6 個月效期)', checked: false },
-                            { name: 'VJW (Visit Japan Web) QR Code 截圖', checked: false },
-                            { name: '台灣駕照 (正本)', checked: false },
-                            { name: '日文駕照譯本 (正本)', checked: false },
-                            { name: '電子機票 / 訂房確認單', checked: false },
-                            { name: '旅遊保險單', checked: false }
+                            { name: '護照 (效期6個月以上)', checked: false },
+                            { name: 'VJW QR Code 截圖', checked: false },
+                            { name: '台灣駕照正本', checked: false },
+                            { name: '日文駕照譯本', checked: false },
+                            { name: '機票/訂房憑證', checked: false }
                         ]
                     },
                     {
-                        title: '金錢與支付 (Payment)',
+                        title: '金錢與網路',
                         items: [
-                            { name: '日幣現金 (分裝)', checked: false },
-                            { name: '信用卡 (海外高回饋)', checked: false },
-                            { name: '交通卡 (Suica/ICOCA) - 綁定手機', checked: false }
+                            { name: '日幣現金', checked: false },
+                            { name: '信用卡 (海外回饋)', checked: false },
+                            { name: 'Sim卡 / 漫遊設定', checked: false }
                         ]
                     },
                     {
-                        title: '電子產品 (Electronics)',
+                        title: '隨身用品',
                         items: [
-                            { name: '手機 & 充電線', checked: false },
-                            { name: '行動電源 (需隨身攜帶)', checked: false },
-                            { name: '漫遊網卡 / eSIM 設定', checked: false },
-                            { name: '車充 (自駕用)', checked: false },
-                            { name: '手機架 (自駕導航備用)', checked: false }
-                        ]
-                    },
-                    {
-                        title: '衣物與生活 (Daily)',
-                        items: [
-                            { name: '換洗衣物 (洋蔥式穿法)', checked: false },
-                            { name: '好走的鞋子', checked: false },
-                            { name: '牙刷牙膏 (日本部分飯店不主動提供)', checked: false },
-                            { name: '常備藥品 (感冒/腸胃/OK繃)', checked: false },
-                            { name: '小孩安撫玩具/零食', checked: false }
-                        ]
-                    }
-                ],
-                days: [
-                    {
-                        shortDate: '12/12', weekday: '週五',
-                        title: 'Day 1: 抵達福岡',
-                        desc: 'Arrival & Christmas Lights',
-                        specialAlert: '建議直接搭計程車前往住宿 (¥2,000)。晚上可散步去看藍色燈海。',
-                        events: [
-                            { 
-                                time: '19:35', 
-                                title: '抵達福岡機場', 
-                                type: '航班', 
-                                imgKey: 'airport,night', 
-                                note: '<strong>中華航空 CI116</strong><br>TPE 16:25 ➔ FUK 19:35<br>飛行時間 2h10m<br>入境手續與領行李。', 
-                                attachedImage: 'flight_ticket.jpg' 
-                            },
-                            { time: '21:00', title: '搭計程車前往住宿', type: '交通', imgKey: 'taxi,japan', note: '前往 Sumiyoshi apartment。' },
-                            { time: '21:30', title: 'Sumiyoshi apartment', type: '住宿', imgKey: 'apartment,interior', note: '辦理入住。' },
-                            { time: '22:00', title: '博多車站光之街', type: '聖誕', imgKey: 'christmas,lights', note: '藍色燈海散步 (Hikari no Machi)，感受聖誕氣氛。', isChristmas: true }
-                        ]
-                    },
-                    {
-                        shortDate: '12/13', weekday: '週六',
-                        title: 'Day 2: 親子 & 潮流',
-                        desc: 'Toys, Hotpot & Streetwear',
-                        specialAlert: '中午餐廳務必預約。下午行程包含聖誕市集與麵包名店。',
-                        events: [
-                            { time: '08:30', title: 'Fuk Coffee', type: '咖啡', imgKey: 'coffee,latte', note: '晨間咖啡時光。' },
-                            { time: '10:00', title: '福岡玩具美術館', type: '體驗', imgKey: 'woodentoy', note: 'LaLaport 1F，開門即入場。', mapQuery: 'Fukuoka Toy Museum' },
-                            { time: '12:45', title: '博多華味鳥 (博多站前)', type: '午餐', imgKey: 'hotpot,chicken', note: '午間限定水炊御膳。', mapQuery: 'Hakata Hanamidori Hakata Station', isReservation: true, booked: false },
-                            { time: '14:45', title: '天神大名潮流區', type: '購物', imgKey: 'streetwear', note: 'Supreme, Neighborhood, Stussy。', mapQuery: 'Supreme Fukuoka' },
-                            { time: '16:00', title: 'THE FULL FULL TENJIN', type: '美食', imgKey: 'bakery,bread', note: '明太子法國麵包名店，適合下午茶。', mapQuery: 'Full Full Pan to Wine Tenjin', isReservation: true, booked: false },
-                            { time: '16:45', title: '大名花園城聖誕市集', type: '聖誕', imgKey: 'christmas,market', note: 'Christmas Gate 市集，喝杯熱紅酒休息。', isChristmas: true },
-                            { time: '19:30', title: 'Sky Rental Store 取車', type: '租車', imgKey: 'car,keys', note: '設定往高千穗的導航。', isReservation: true, booked: false }
-                        ]
-                    },
-                    {
-                        shortDate: '12/14', weekday: '週日',
-                        title: 'Day 3: 高千穗 & 阿蘇',
-                        desc: 'Nature & Volcano',
-                        specialAlert: '<strong>早鳥衝刺日！</strong> 06:30 出門。前往由布院山路無路燈，請慢行。',
-                        events: [
-                            { time: '06:30', title: '準時出門', type: '交通', imgKey: 'highway,sunrise', note: '前往高千穗，車程約 3 小時。', warning: true },
-                            { time: '09:30', title: '高千穗峽 划船', type: '體驗', imgKey: 'boat,waterfall', note: '划船 40 分鐘 + 拍照。', mapQuery: 'Takachiho Gorge Boat Rental', isReservation: true, booked: false },
-                            { time: '11:30', title: '千穗之家 流水麵', type: '午餐', imgKey: 'noodles', mapQuery: 'Chiho no Ie' },
-                            { time: '14:00', title: '阿蘇中岳火山口', type: '景點', imgKey: 'volcano', mapQuery: 'Mount Aso Nakadake Crater' },
-                            { time: '15:00', title: '草千里 Green Park', type: '景點', imgKey: 'grassland', mapQuery: 'Kusasenri' },
-                            { time: '20:30', title: '湯布院 良旅屋 ETAVIA', type: '住宿', imgKey: 'ryokan', mapQuery: 'Yufuin Ryoryoya ETAVIA' }
-                        ]
-                    },
-                    {
-                        shortDate: '12/15', weekday: '週一',
-                        title: 'Day 4: 動物園 & 美術館',
-                        desc: 'Safari & Art Museum',
-                        specialAlert: '早上搶叢林巴士票，下午美術館需預約。',
-                        events: [
-                            { time: '08:30', title: '九州自然動物園', type: '體驗', imgKey: 'lion,safari', note: '09:00 開園，搶最早場的叢林巴士。', mapQuery: 'African Safari Japan', isReservation: true, booked: false },
-                            { time: '09:30', title: '叢林巴士體驗', type: '體驗', imgKey: 'bus,zoo', note: '餵食體驗約 50 分鐘。' },
-                            { time: '13:00', title: 'COMICO ART MUSEUM', type: '藝術', imgKey: 'museum,architecture', note: '隈研吾建築，村上隆作品。', mapQuery: 'COMICO ART MUSEUM YUFUIN', isReservation: true, booked: false },
-                            { time: '14:00', title: '湯之坪街道 & 金鱗湖', type: '景點', imgKey: 'lake,mist', note: '購買 B-Speak 蛋糕捲。', mapQuery: 'Kinrin Lake' },
-                            { time: '18:30', title: '燒肉 多牛 (博多站南)', type: '晚餐', imgKey: 'yakiniku', note: 'CP值極高和牛，需現場排隊。', mapQuery: 'Yakiniku Tagyu Hakata' }
-                        ]
-                    },
-                    {
-                        shortDate: '12/16', weekday: '週二',
-                        title: 'Day 5: 糸島海線',
-                        desc: 'Strawberry & Seaside',
-                        specialAlert: '早上先採草莓 (已預約)。晚上還車前記得加油。',
-                        events: [
-                            { time: '09:30', title: 'Itoshima Berry Farm', type: '體驗', imgKey: 'strawberry', note: '採草莓體驗。', mapQuery: 'Itoshima Berry Farm', isReservation: true, booked: false },
-                            { time: '12:00', title: '海鮮餐廳 Futamigaura', type: '午餐', imgKey: 'seafood,ocean', note: '海景第一排午餐。', mapQuery: 'Itoshima Seafood Restaurant Futamigaura' },
-                            { time: '13:30', title: '花鹽布丁 & 觀光船', type: '景點', imgKey: 'pudding', note: '視風浪決定是否搭芥屋大門觀光船。', mapQuery: 'Mataichi no Shio' },
-                            { time: '19:30', title: 'Sky Rental Store 還車', type: '租車', imgKey: 'car,gas', note: '還車前請加滿油。' },
-                            { time: '20:00', title: '資桑烏龍麵', type: '晚餐', imgKey: 'udon', note: '推薦：肉牛蒡天婦羅烏龍麵。', mapQuery: 'Sukesan Udon' }
-                        ]
-                    },
-                    {
-                        shortDate: '12/17', weekday: '週三',
-                        title: 'Day 6: 太宰府電車旅',
-                        desc: 'Shrine, Market & Yatai',
-                        specialAlert: '太宰府電車輕鬆遊。晚上逛天神聖誕市集與中洲夜景。',
-                        events: [
-                            { time: '10:00', title: '前往太宰府', type: '交通', imgKey: 'train,japan', note: '天神站搭乘西鐵電車。' },
-                            { time: '11:00', title: '太宰府表參道', type: '景點', imgKey: 'starbucks,japan', note: '吃梅枝餅、逛星巴克概念店。', mapQuery: 'Dazaifu Tenmangu' },
-                            { time: '13:30', title: '太宰府天滿宮', type: '景點', imgKey: 'shrine,bull', note: '參拜學問之神。' },
-                            { time: '14:30', title: '太宰府遊樂園', type: '體驗', imgKey: 'amusementpark', note: '復古樂園，小孩放電。' },
-                            { time: '17:40', title: '天神聖誕市集', type: '聖誕', imgKey: 'christmas,santa', note: '市役所前廣場，氣氛最熱鬧。', isChristmas: true },
-                            { time: '18:30', title: '天神屋台 小金ちゃん', type: '晚餐', imgKey: 'foodstall', note: '體驗炒拉麵。', mapQuery: 'Kokinchantei' },
-                            { time: '20:00', title: '中洲光之大道', type: '聖誕', imgKey: 'night,river', note: '那珂川沿岸金色燈飾散步。', isChristmas: true }
-                        ]
-                    },
-                    {
-                        shortDate: '12/18', weekday: '週四',
-                        title: 'Day 7: 聖誕市集壓軸',
-                        desc: 'Anpanman & Hakata Xmas',
-                        specialAlert: '麵包超人館內解決午餐最方便。晚上博多站聖誕市集。',
-                        events: [
-                            { time: '10:00', title: '麵包超人博物館', type: '體驗', imgKey: 'anpanman', note: '午餐於館內享用。', mapQuery: 'Fukuoka Anpanman Children\'s Museum' },
-                            { time: '16:00', title: '博多運河城', type: '購物', imgKey: 'fountain', note: '觀賞聖誕水舞秀。', mapQuery: 'Canal City Hakata' },
-                            { time: '18:30', title: '博多車站聖誕市集', type: '聖誕', imgKey: 'christmasmarket,night', note: '旅程壓軸！熱紅酒、美食與音樂表演。', isChristmas: true, mapQuery: 'JR Hakata Station' }
-                        ]
-                    },
-                    {
-                        shortDate: '12/19', weekday: '週五',
-                        title: 'Day 8: 最後衝刺',
-                        desc: 'Shopping & Buddha',
-                        specialAlert: '早上先寄放行李，利用地鐵移動。',
-                        events: [
-                            { time: '09:00', title: '退房 & 寄放行李', type: '交通', imgKey: 'luggage', note: '搭計程車至博多車站置物櫃寄放。' },
-                            { time: '09:30', title: '東長寺 (福岡大佛)', type: '景點', imgKey: 'buddha', note: '地鐵祇園站。參觀木造大佛。', mapQuery: 'Tochoji Temple' },
-                            { time: '10:30', title: '大濠公園 & 福岡城跡', type: '景點', imgKey: 'park,lake', note: '星巴克喝咖啡、看草間彌生南瓜。', mapQuery: 'Ohori Park' },
-                            { time: '12:15', title: '博多一双拉麵', type: '午餐', imgKey: 'ramen,bubbles', note: '最後午餐 (博多駅東本店)。', mapQuery: 'Hakata Issou' },
-                            { time: '14:00', title: '博多站伴手禮衝刺', type: '購物', imgKey: 'souvenir,japan', note: 'Ming 或 阪急地下街。必買：努努雞、Menbei。' },
-                            { time: '16:00', title: '燕子林廣場 (RF)', type: '景點', imgKey: 'rooftop,city', note: '俯瞰福岡市景。' },
-                            { time: '17:00', title: '前往福岡機場', type: '交通', imgKey: 'airport,taxi', note: '搭計程車前往最省力。' },
-                            { 
-                                time: '20:35', 
-                                title: '班機起飛', 
-                                type: '航班', 
-                                imgKey: 'airplane', 
-                                note: '<strong>中華航空 CI117</strong><br>FUK 20:35 ➔ TPE 22:20<br>飛行時間 2h45m<br>平安返台。', 
-                                attachedImage: 'flight_ticket.jpg' 
-                            }
+                            { name: '行動電源', checked: false },
+                            { name: '充電線/插頭', checked: false },
+                            { name: '個人藥品', checked: false },
+                            { name: '好走的鞋子', checked: false }
                         ]
                     }
                 ]
